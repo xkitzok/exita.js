@@ -1,7 +1,6 @@
 {
   "name": "exita",
   "version": "0.0.1",
-  "type": "module",
   "dependencies": {
     "typescript": "^5.8.0",
     "@babel/parser": "^7.26.0",
