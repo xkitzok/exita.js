@@ -1,13 +1,78 @@
 {
   "name": "exita",
   "version": "0.0.1",
+  "description": "Exita.js",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "exita": "./bin/exita.js"
+  },
+  "scripts": {
+    "build": "node build.js",
+    "dev": "node build.js --watch",
+    "clean": "rm -rf dist",
+    "test": "vitest",
+    "test:watch": "vitest --watch",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
+  },
   "dependencies": {
-    "typescript": "^5.8.0",
     "@babel/parser": "^7.26.0",
     "@babel/traverse": "^7.26.0",
-    "@babel/generator": "^7.26.0"
+    "@babel/generator": "^7.26.0",
+    "@babel/types": "^7.26.0",
+    "@babel/plugin-syntax-jsx": "^7.25.9",
+    "chokidar": "^4.0.0",
+    "commander": "^12.0.0",
+    "glob": "^11.0.0",
+    "magic-string": "^0.30.0",
+    "picocolors": "^1.1.0"
   },
   "devDependencies": {
-    "@types/node": "^22.0.0"
-  }
+    "@types/babel__generator": "^7.6.8",
+    "@types/babel__traverse": "^7.20.6",
+    "@types/babel__parser": "^7.0.0",
+    "@types/node": "^22.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "esbuild": "^0.25.0",
+    "eslint": "^9.0.0",
+    "prettier": "^3.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.8.0",
+    "vitest": "^2.0.0"
+  },
+  "peerDependencies": {
+    "react": ">=18.0.0",
+    "react-dom": ">=18.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "react-dom": {
+      "optional": true
+    }
+  },
+  "keywords": [
+    "exita",
+    "typescript",
+    "compiler",
+    "signals",
+    "jsx",
+    "react",
+    "build-tool"
+  ],
+  "author": "xkitz",
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "files": [
+    "dist",
+    "bin",
+    "README.md",
+    "LICENSE"
+  ]
 }
