@@ -4,11 +4,7 @@ import { success, error } from '../utils/diagnostics';
 
 export async function buildRuntime(outDir: string) {
   const projectRoot = process.cwd();
-  // Look for .exj first, fallback to .ts
-  let runtimeSource = path.join(projectRoot, 'src', 'runtime', 'exita-runtime.exj');
-  if (!require('fs').existsSync(runtimeSource)) {
-    runtimeSource = path.join(projectRoot, 'src', 'runtime', 'exita-runtime.ts');
-  }
+  const runtimeSource = path.join(projectRoot, 'src', 'runtime', 'exita-runtime.ts');
   const outFile = path.join(outDir, 'runtime.js');
 
   try {
@@ -20,7 +16,6 @@ export async function buildRuntime(outDir: string) {
       outfile: outFile,
       platform: 'browser',
       target: 'es2020',
-      loader: { '.exj': 'ts' },  // treat .exj as TypeScript
     });
 
     await esbuild.build({
@@ -31,7 +26,6 @@ export async function buildRuntime(outDir: string) {
       outfile: path.join(outDir, 'runtime.dev.js'),
       platform: 'browser',
       target: 'es2020',
-      loader: { '.exj': 'ts' },
     });
 
     success('Runtime built');

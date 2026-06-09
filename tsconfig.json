@@ -14,5 +14,5 @@
     "declarationDir": "dist/types"
   },
   "include": ["src"],
-  "exclude": ["node_modules", "dist", "test", "examples"]
+  "exclude": ["node_modules", "dist", "test", "examples", "lsp-package"]
 }

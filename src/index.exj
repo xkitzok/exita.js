@@ -1,0 +1,68 @@
+import { parseExitaFile } from './parser/exita-parser';
+import { generateHeader } from './generator/hxj-generator';
+import { generateDts as emitDts } from './generator/dts-generator';
+import { compileToJS } from './generator/js-generator';
+import { buildRuntime } from './runtime/build-runtime';
+import { globSync } from 'glob';
+import { success, info, warn, error } from './utils/diagnostics';
+
+export interface BuildOptions {
+  entry: string;
+  outDir: string;
+  generateHeaders?: boolean;
+  generateJS?: boolean;
+  generateDts?: boolean;
+  generateRuntime?: boolean;
+}
+
+export async function build(options: BuildOptions) {
+  const {
+    entry, outDir,
+    generateHeaders = true,
+    generateJS = true,
+    generateDts = false,
+    generateRuntime = true,
+  } = options;
+
+  info(`Searching for files matching: ${entry}`);
+  const files = globSync(entry);
+
+  if (files.length === 0) {
+    warn(`No .exj files found matching pattern: ${entry}`);
+    return;
+  }
+
+  info(`Found ${files.length} file(s) to compile`);
+  for (const file of files) {
+    info(`Compiling ${file}`);
+    try {
+      const moduleInfo = parseExitaFile(file);
+      const exportCount = moduleInfo.exports.length;
+      info(`  Parsed ${exportCount} export(s) from ${moduleInfo.name}`);
+
+      if (generateHeaders) {
+        const headerPath = generateHeader(moduleInfo, outDir);
+        info(`  Header generated: ${moduleInfo.headerPath || moduleInfo.name + '.hxj'}`);
+      }
+
+      if (generateJS) {
+        const outFile = compileToJS(file, outDir);
+        info(`  JavaScript emitted: ${outFile}`);
+      }
+
+      if (generateDts) {
+        emitDts(file, outDir);
+        info(`  Type definitions emitted`);
+      }
+    } catch (e: any) {
+      error(`Failed to compile ${file}: ${e.message}`);
+    }
+  }
+
+  if (generateRuntime) {
+    info('Building runtime...');
+    await buildRuntime(outDir);
+  }
+
+  success('Build completed');
+}

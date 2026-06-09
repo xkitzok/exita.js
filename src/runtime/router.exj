@@ -1,0 +1,34 @@
+// Simple hash-based router
+type RouteHandler = () => any;
+
+class Router {
+  private routes: Map<string, RouteHandler> = new Map();
+  private currentHandler: RouteHandler | null = null;
+
+  constructor() {
+    window.addEventListener('hashchange', () => this.resolve());
+  }
+
+  add(path: string, handler: RouteHandler) {
+    this.routes.set(path, handler);
+  }
+
+  resolve() {
+    const hash = location.hash.slice(1) || '/';
+    const handler = this.routes.get(hash);
+    if (handler) {
+      this.currentHandler = handler;
+      const app = document.getElementById('app');
+      if (app) {
+        app.innerHTML = '';
+        app.appendChild(handler());
+      }
+    }
+  }
+
+  start() {
+    this.resolve();
+  }
+}
+
+export const router = new Router();

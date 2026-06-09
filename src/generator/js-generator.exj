@@ -4,20 +4,20 @@ import * as ts from 'typescript';
 import { parseExitaFile } from '../parser/exita-parser';
 import { signalTransformer } from '../transforms/signal-transformer';
 import { extractStylesFromCode } from '../transforms/style-extractor';
+import { success, info, error } from '../utils/diagnostics';
 
 export function compileToJS(filePath: string, outDir: string): string {
   const rawCode = fs.readFileSync(filePath, 'utf-8');
   const moduleInfo = parseExitaFile(filePath);
 
-  // Style extraction from original source (before transformation)
-  const componentName = moduleInfo.name;
-  const scopedClass = extractStylesFromCode(rawCode, componentName, outDir);
+  // Style extraction (optional)
+  if (rawCode.includes('<style>')) {
+    const componentName = moduleInfo.name;
+    extractStylesFromCode(rawCode, componentName, outDir);
+  }
 
   // Remove Add.Module lines
   let cleanCode = rawCode.replace(/Add\.Module\s*\[[^\]]+\]\s*;?\n?/g, '');
-
-  // Insert the scoped class into the root element of the component if available (advanced)
-  // For now, just let the user manually add class={scopedClass} later. We'll inject a prop.
 
   const source = cleanCode;
 
@@ -53,6 +53,7 @@ export function compileToJS(filePath: string, outDir: string): string {
   const outFile = path.join(outDir, path.basename(filePath, '.exj') + '.exj.js');
   fs.mkdirSync(path.dirname(outFile), { recursive: true });
   fs.writeFileSync(outFile, output, 'utf-8');
-  console.log(`Generated JS: ${outFile}`);
+  // No output here – the build loop already says "Compiling ..."
+
   return outFile;
 }

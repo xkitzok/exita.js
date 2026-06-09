@@ -1,0 +1,22 @@
+export interface ValidationRule {
+  validate: (value: string) => boolean;
+  message: string;
+}
+
+export function useForm(initialValues: Record<string, string>) {
+  const values = { ...initialValues };
+  const errors: Record<string, string> = {};
+
+  const validate = (field: string, rules: ValidationRule[]) => {
+    const value = values[field];
+    for (const rule of rules) {
+      if (!rule.validate(value)) {
+        errors[field] = rule.message;
+        return;
+      }
+    }
+    errors[field] = '';
+  };
+
+  return { values, errors, validate };
+}

@@ -1,21 +1,15 @@
 {
-  "name": "exita-vscode",
-  "displayName": "Exita",
+  "name": "exita-lsp",
+  "displayName": "Exita Language Support",
   "version": "0.1.0",
   "engines": { "vscode": "^1.80.0" },
   "categories": ["Programming Languages"],
+  "activationEvents": ["onLanguage:exj"],
+  "main": "./extension.js",
   "contributes": {
     "languages": [
-      {
-        "id": "exj",
-        "extensions": [".exj"],
-        "aliases": ["Exita Source"]
-      },
-      {
-        "id": "hxj",
-        "extensions": [".hxj"],
-        "aliases": ["Exita Header"]
-      }
+      { "id": "exj", "extensions": [".exj"] },
+      { "id": "hxj", "extensions": [".hxj"] }
     ]
   }
 }
