@@ -1,6 +1,4 @@
-// ── Signals ──
 let currentEffect: (() => void) | null = null;
-
 export function signal<T>(initialValue: T) {
   let value = initialValue;
   const subscribers = new Set<() => void>();
@@ -23,22 +21,15 @@ export function signal<T>(initialValue: T) {
     }
   });
 }
-
 export function effect(fn: () => void) {
   const run = () => { currentEffect = run; fn(); currentEffect = null; };
   run();
 }
-
 export function computed<T>(fn: () => T) {
   const s = signal<T>(undefined as any);
   effect(() => { (s as any).value = fn(); });
   return s;
 }
-
-// ── Async component support ──
-type VNode = any; // simplified
-const pending = new WeakSet<Promise<any>>();
-
 export function createElement(
   type: string | Function,
   props: Record<string, any> | null,
@@ -46,13 +37,18 @@ export function createElement(
 ): any {
   if (typeof type === 'function') {
     const result = type({ ...props, children });
-    // If the component returns a Promise (async), handle it
     if (result instanceof Promise) {
-      return handleAsyncComponent(result, type.name || 'Anonymous');
+      const placeholder = document.createElement('div');
+      placeholder.setAttribute('data-async', '');
+      placeholder.textContent = 'Loading...';
+      result.then(resolved => {
+        const parent = placeholder.parentNode;
+        if (parent) parent.replaceChild(resolved, placeholder);
+      });
+      return placeholder;
     }
     return result;
   }
-
   const el = document.createElement(type);
   if (props) {
     for (const [key, val] of Object.entries(props)) {
@@ -68,7 +64,6 @@ export function createElement(
       }
     }
   }
-
   children.flat().forEach(child => {
     if (child == null || child === false) return;
     if (typeof child === 'string' || typeof child === 'number') {
@@ -87,21 +82,6 @@ export function createElement(
   });
   return el;
 }
-
-function handleAsyncComponent(promise: Promise<any>, name: string) {
-  // Return a placeholder that resolves later
-  const placeholder = document.createElement('div');
-  placeholder.setAttribute('data-async', name);
-  placeholder.textContent = `Loading ${name}...`;
-  promise.then(resolved => {
-    const parent = placeholder.parentNode;
-    if (parent) {
-      parent.replaceChild(resolved, placeholder);
-    }
-  });
-  return placeholder;
-}
-
 export function Fragment({ children }: { children?: any[] }) {
   const frag = document.createDocumentFragment();
   (children || []).flat().forEach(child => {
@@ -110,16 +90,10 @@ export function Fragment({ children }: { children?: any[] }) {
   });
   return frag;
 }
-
 export function render(component: () => any, container: HTMLElement) {
   container.innerHTML = '';
-  const vnode = component();
-  if (vnode instanceof Node) {
-    container.appendChild(vnode);
-  }
+  container.appendChild(component());
 }
-
-// ── Error Overlay ──
 export function injectErrorOverlay() {
   const style = document.createElement('style');
   style.textContent = `
@@ -135,21 +109,18 @@ export function injectErrorOverlay() {
     }
   `;
   document.head.appendChild(style);
-
   window.addEventListener('error', (e) => {
     showOverlay(e.error?.message || e.message);
   });
   window.addEventListener('unhandledrejection', (e) => {
     showOverlay(e.reason?.message || 'Unhandled Promise Rejection');
   });
-
   function showOverlay(message: string) {
     const existing = document.getElementById('exita-error-overlay');
     if (existing) existing.remove();
     const div = document.createElement('div');
     div.id = 'exita-error-overlay';
-    div.innerHTML = `<pre>🚫 ${escapeHtml(message)}</pre>`;
+    div.innerHTML = `<pre>${message.replace(/</g,'&lt;')}</pre>`;
     document.body.appendChild(div);
   }
-  function escapeHtml(s: string) { return s.replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 }

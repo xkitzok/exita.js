@@ -1,26 +1,26 @@
-import * as ts from 'typescript';
+import * as ts from 'typescript'
 
 export function signalTransformer<T extends ts.Node>(context: ts.TransformationContext) {
-  const { factory } = context;
+  const { factory } = context
 
   function visit(node: ts.Node): ts.Node {
     if (ts.isFunctionDeclaration(node) && node.body) {
-      return updateFunction(node, node.body, factory);
+      return updateFunction(node, node.body, factory)
     }
     if (ts.isFunctionExpression(node) && node.body) {
-      return updateFunction(node, node.body, factory);
+      return updateFunction(node, node.body, factory)
     }
     if (ts.isArrowFunction(node) && node.body && ts.isBlock(node.body)) {
-      const newBody = transformBlock(node.body, factory);
+      const newBody = transformBlock(node.body, factory)
       return factory.updateArrowFunction(
         node, node.modifiers, node.typeParameters, node.parameters,
         node.type, node.equalsGreaterThanToken, newBody
-      );
+      )
     }
-    return ts.visitEachChild(node, visit, context);
+    return ts.visitEachChild(node, visit, context)
   }
 
-  return (rootNode: T) => ts.visitNode(rootNode, visit) as T;
+  return (rootNode: T) => ts.visitNode(rootNode, visit) as T
 }
 
 function updateFunction(
@@ -28,39 +28,34 @@ function updateFunction(
   body: ts.Block,
   factory: ts.NodeFactory
 ): ts.Node {
-  const newBody = transformBlock(body, factory);
+  const newBody = transformBlock(body, factory)
   if (ts.isFunctionDeclaration(node)) {
     return factory.updateFunctionDeclaration(
       node, node.modifiers, node.asteriskToken, node.name,
       node.typeParameters, node.parameters, node.type, newBody
-    );
+    )
   } else {
     return factory.updateFunctionExpression(
       node, node.modifiers, node.asteriskToken, node.name,
       node.typeParameters, node.parameters, node.type, newBody
-    );
+    )
   }
 }
 
 function transformBlock(body: ts.Block, factory: ts.NodeFactory): ts.Block {
-  const signalVars = new Set<string>();
-  const declIdentifiers = new WeakSet<ts.Identifier>();
-  const newStatements: ts.Statement[] = [];
+  const signalVars = new Set<string>()
+  const declIdentifiers = new WeakSet<ts.Identifier>()
+  const newStatements: ts.Statement[] = []
 
-  // First pass: convert let → signal
   for (const stmt of body.statements) {
     if (ts.isVariableStatement(stmt) && (stmt.declarationList.flags & ts.NodeFlags.Let)) {
-      const newDecls: ts.VariableDeclaration[] = [];
-
+      const newDecls: ts.VariableDeclaration[] = []
       for (const decl of stmt.declarationList.declarations) {
         if (ts.isIdentifier(decl.name) && decl.initializer) {
-          const varName = decl.name.text;
-          signalVars.add(varName);
-
-          // Create a new identifier for the declaration name
-          const id = factory.createIdentifier(varName);
-          declIdentifiers.add(id);  // remember this identifier as a declaration name
-
+          const varName = decl.name.text
+          signalVars.add(varName)
+          const id = factory.createIdentifier(varName)
+          declIdentifiers.add(id)
           newDecls.push(
             factory.createVariableDeclaration(
               id, undefined, undefined,
@@ -70,27 +65,24 @@ function transformBlock(body: ts.Block, factory: ts.NodeFactory): ts.Block {
                 [decl.initializer]
               )
             )
-          );
+          )
         } else {
-          newDecls.push(decl);
+          newDecls.push(decl)
         }
       }
-
       newStatements.push(
         factory.createVariableStatement(
           stmt.modifiers,
           factory.createVariableDeclarationList(newDecls, ts.NodeFlags.Const)
         )
-      );
+      )
     } else {
-      newStatements.push(stmt);
+      newStatements.push(stmt)
     }
   }
 
-  const newBody = factory.updateBlock(body, newStatements);
-
-  // Second pass: replace non‑declaration identifiers with .value
-  return replaceIdentifiers(newBody, signalVars, declIdentifiers, factory);
+  const newBody = factory.updateBlock(body, newStatements)
+  return replaceIdentifiers(newBody, signalVars, declIdentifiers, factory)
 }
 
 function replaceIdentifiers(
@@ -101,16 +93,15 @@ function replaceIdentifiers(
 ): any {
   function visitor(n: ts.Node): ts.Node {
     if (ts.isIdentifier(n) && signalVars.has(n.text)) {
-      // Skip if this identifier is a declaration name
       if (declIdentifiers.has(n)) {
-        return n;
+        return n
       }
       return factory.createPropertyAccessExpression(
         factory.createIdentifier(n.text),
         'value'
-      );
+      )
     }
-    return ts.visitEachChild(n, visitor, undefined!);
+    return ts.visitEachChild(n, visitor, undefined!)
   }
-  return ts.visitNode(node, visitor);
+  return ts.visitNode(node, visitor)
 }

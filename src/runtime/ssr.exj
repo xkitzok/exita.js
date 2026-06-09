@@ -1,13 +1,10 @@
-// Minimal SSR renderer – runs Exita components in Node and outputs HTML string
 import { createElement } from './exita-runtime';
-import { renderToString } from 'react-dom/server';  // we'll use React for SSR compatibility
+import { renderToString } from 'react-dom/server';  
 import * as React from 'react';
-
 export function renderSSR(Component: Function, props: any = {}): string {
-  // Wrap Exita component into a React component for SSR
   const ReactWrapper = () => {
     const result = Component(props);
-    return result;  // JSX elements are already React elements (since we use createElement)
+    return result;  
   };
   return renderToString(React.createElement(ReactWrapper));
 }

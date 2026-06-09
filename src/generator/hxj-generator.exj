@@ -1,42 +1,37 @@
-import * as fs from 'fs';
-import * as path from 'path';
-import { ExitaModule, ExitaExport } from '../types';
+import * as fs from 'fs'
+import * as path from 'path'
+import { ExitaModule, ExitaExport } from '../types'
 
 export function generateHeader(module: ExitaModule, outDir: string): string {
-  const headerPath = path.join(outDir, module.headerPath || `${module.name}.hxj`);
+  const headerPath = path.join(outDir, module.headerPath || `${module.name}.hxj`)
   
   let content = `// ${module.headerPath} - AUTO-GENERATED, DO NOT EDIT MANUALLY
 Add.Module [${path.basename(module.sourcePath)}]
 
-`;
+`
 
-  // Generate interfaces and type exports
   module.exports.forEach(exp => {
     if (exp.kind === 'function') {
-      content += `export declare function ${exp.name}(`;
+      content += `export declare function ${exp.name}(`
       if (exp.params && exp.params.length > 0) {
         content += exp.params.map(p => {
-          let paramStr = p.name;
-          if (p.typeAnnotation) paramStr += `: ${p.typeAnnotation}`;
-          if (p.defaultValue) paramStr += ` = ${p.defaultValue}`;
-          return paramStr;
-        }).join(', ');
+          let paramStr = p.name
+          if (p.typeAnnotation) paramStr += `: ${p.typeAnnotation}`
+          if (p.defaultValue) paramStr += ` = ${p.defaultValue}`
+          return paramStr
+        }).join(', ')
       }
-      content += `): ${exp.returnType || 'JSXElement'}\n\n`;
+      content += `): ${exp.returnType || 'JSXElement'}\n\n`
     } else if (exp.kind === 'variable') {
-      content += `export declare const ${exp.name}: ${exp.typeAnnotation || 'any'}\n\n`;
+      content += `export declare const ${exp.name}: ${exp.typeAnnotation || 'any'}\n\n`
     } else if (exp.kind === 'interface') {
-      content += `export interface ${exp.name} { /* inferred */ }\n\n`;
+      content += `export interface ${exp.name} { /* inferred */ }\n\n`
     }
-  });
+  })
 
-  // If any signal variables were found, export __signals
-  // In Phase 1, we just check if any export has isSignal flag (unset currently)
-  content += `// Optional: exported signals for external optimization\n`;
-  content += `export declare const __signals: string[]\n`;
+  content += `export declare const __signals: string[]\n`
 
-  fs.mkdirSync(path.dirname(headerPath), { recursive: true });
-  fs.writeFileSync(headerPath, content, 'utf-8');
-  console.log(`Generated header: ${headerPath}`);
-  return headerPath;
+  fs.mkdirSync(path.dirname(headerPath), { recursive: true })
+  fs.writeFileSync(headerPath, content, 'utf-8')
+  return headerPath
 }

@@ -1,46 +1,36 @@
-import * as fs from 'fs';
-import * as semver from 'semver';
+import * as fs from 'fs'
+import * as semver from 'semver'
 
 export function checkBreaking(headerFile: string, oldVersion: string) {
   if (!fs.existsSync(headerFile)) {
-    console.error(`Header file ${headerFile} not found.`);
-    return;
+    console.error(`Header file ${headerFile} not found.`)
+    return
   }
-  
-  // Simulate: read current header and compare with a git tag or a stored snapshot.
-  // For simplicity, we'll assume a .hxj.bak file exists for the old version.
-  const oldHeader = headerFile + '.bak';
+  const oldHeader = headerFile + '.bak'
   if (!fs.existsSync(oldHeader)) {
-    console.error(`No backup found for version ${oldVersion}. Create ${oldHeader} first.`);
-    return;
+    console.error(`No backup found for version ${oldVersion}. Create ${oldHeader} first.`)
+    return
   }
-  
-  const current = fs.readFileSync(headerFile, 'utf-8');
-  const old = fs.readFileSync(oldHeader, 'utf-8');
-  
-  // Extract export names
+  const current = fs.readFileSync(headerFile, 'utf-8')
+  const old = fs.readFileSync(oldHeader, 'utf-8')
   const extractExports = (content: string) => {
-    const re = /export\s+(?:declare\s+)?(function|const|interface)\s+(\w+)/g;
-    const names: string[] = [];
-    let m;
-    while ((m = re.exec(content))) names.push(m[2]);
-    return names;
-  };
-  
-  const currentExports = extractExports(current);
-  const oldExports = extractExports(old);
-  
-  const removed = oldExports.filter(e => !currentExports.includes(e));
-  const added = currentExports.filter(e => !oldExports.includes(e));
-  
-  console.log(`\n🔍 Breaking change check: ${headerFile} vs ${oldVersion}`);
+    const re = /export\s+(?:declare\s+)?(function|const|interface)\s+(\w+)/g
+    const names: string[] = []
+    let m
+    while ((m = re.exec(content))) names.push(m[2])
+    return names
+  }
+  const currentExports = extractExports(current)
+  const oldExports = extractExports(old)
+  const removed = oldExports.filter(e => !currentExports.includes(e))
+  const added = currentExports.filter(e => !oldExports.includes(e))
   if (removed.length) {
-    console.log(`❌ Removed exports: ${removed.join(', ')}`);
+    console.log(`Removed exports: ${removed.join(', ')}`)
   }
   if (added.length) {
-    console.log(`✅ Added exports: ${added.join(', ')}`);
+    console.log(`Added exports: ${added.join(', ')}`)
   }
   if (!removed.length && !added.length) {
-    console.log('✔ No breaking changes detected.');
+    console.log('No breaking changes detected.')
   }
 }

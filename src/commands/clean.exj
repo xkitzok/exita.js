@@ -1,19 +1,18 @@
-import * as fs from 'fs';
-import * as path from 'path';
+import * as fs from 'fs'
+import * as path from 'path'
+import { success } from '../utils/diagnostics'
 
 export function cleanProject() {
-  const distPath = path.join(process.cwd(), 'dist');
-  const lockPath = path.join(process.cwd(), 'exitapkg.json.lock');
+  const distPath = path.join(process.cwd(), 'dist')
+  const lockPath = path.join(process.cwd(), 'exitapkg.json.lock')
 
   if (fs.existsSync(distPath)) {
-    fs.rmSync(distPath, { recursive: true, force: true });
-    console.log('🧹 Removed dist/');
+    fs.rmSync(distPath, { recursive: true, force: true })
   }
 
   if (fs.existsSync(lockPath)) {
-    fs.unlinkSync(lockPath);
-    console.log('🧹 Removed exitapkg.json.lock');
+    fs.unlinkSync(lockPath)
   }
 
-  console.log('✅ Cleaned.');
+  success('Cleaned')
 }

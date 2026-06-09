@@ -1,25 +1,16 @@
-import * as fs from 'fs';
-import * as path from 'path';
-import * as ts from 'typescript';
-import { parseExitaFile } from '../parser/exita-parser';
-import { signalTransformer } from '../transforms/signal-transformer';
-import { extractStylesFromCode } from '../transforms/style-extractor';
-import { success, info, error } from '../utils/diagnostics';
+import * as fs from 'fs'
+import * as path from 'path'
+import * as ts from 'typescript'
+import { parseExitaFile } from '../parser/exita-parser'
+import { signalTransformer } from '../transforms/signal-transformer'
 
 export function compileToJS(filePath: string, outDir: string): string {
-  const rawCode = fs.readFileSync(filePath, 'utf-8');
-  const moduleInfo = parseExitaFile(filePath);
+  const rawCode = fs.readFileSync(filePath, 'utf-8')
+  const moduleInfo = parseExitaFile(filePath)
 
-  // Style extraction (optional)
-  if (rawCode.includes('<style>')) {
-    const componentName = moduleInfo.name;
-    extractStylesFromCode(rawCode, componentName, outDir);
-  }
+  let cleanCode = rawCode.replace(/Add\.Module\s*\[[^\]]+\]\s*;?\n?/g, '')
 
-  // Remove Add.Module lines
-  let cleanCode = rawCode.replace(/Add\.Module\s*\[[^\]]+\]\s*;?\n?/g, '');
-
-  const source = cleanCode;
+  const source = cleanCode
 
   const result = ts.transpileModule(source, {
     compilerOptions: {
@@ -33,27 +24,24 @@ export function compileToJS(filePath: string, outDir: string): string {
       strict: false,
     },
     transformers: { before: [signalTransformer] }
-  });
+  })
 
-  let output = result.outputText;
+  let output = result.outputText
 
-  // Add runtime imports
-  const needsSignal = output.includes('__exita_signal');
-  const needsCreateElement = output.includes('__exita_createElement');
-  const imports: string[] = [];
-  if (needsSignal) imports.push('signal as __exita_signal');
-  if (needsCreateElement) imports.push('createElement as __exita_createElement');
-  if (output.includes('Fragment')) imports.push('Fragment');
+  const needsSignal = output.includes('__exita_signal')
+  const needsCreateElement = output.includes('__exita_createElement')
+  const imports: string[] = []
+  if (needsSignal) imports.push('signal as __exita_signal')
+  if (needsCreateElement) imports.push('createElement as __exita_createElement')
+  if (output.includes('Fragment')) imports.push('Fragment')
   if (imports.length) {
-    output = `import { ${imports.join(', ')} } from './runtime.js';\n${output}`;
+    output = `import { ${imports.join(', ')} } from './runtime.js';\n${output}`
   }
 
-  output = output.replace(/^import\s+['"]\.\/runtime\.js['"];?\n/gm, '');
+  output = output.replace(/^import\s+['"]\.\/runtime\.js['"];?\n/gm, '')
 
-  const outFile = path.join(outDir, path.basename(filePath, '.exj') + '.exj.js');
-  fs.mkdirSync(path.dirname(outFile), { recursive: true });
-  fs.writeFileSync(outFile, output, 'utf-8');
-  // No output here – the build loop already says "Compiling ..."
-
-  return outFile;
+  const outFile = path.join(outDir, path.basename(filePath, '.exj') + '.exj.js')
+  fs.mkdirSync(path.dirname(outFile), { recursive: true })
+  fs.writeFileSync(outFile, output, 'utf-8')
+  return outFile
 }

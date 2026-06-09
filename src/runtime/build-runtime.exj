@@ -1,11 +1,11 @@
-import * as esbuild from 'esbuild';
-import * as path from 'path';
-import { success, error } from '../utils/diagnostics';
+import * as esbuild from 'esbuild'
+import * as path from 'path'
+import { success, error } from '../utils/diagnostics'
 
 export async function buildRuntime(outDir: string) {
-  const projectRoot = process.cwd();
-  const runtimeSource = path.join(projectRoot, 'src', 'runtime', 'exita-runtime.ts');
-  const outFile = path.join(outDir, 'runtime.js');
+  const projectRoot = process.cwd()
+  const runtimeSource = path.join(projectRoot, 'src', 'runtime', 'exita-runtime.exj')
+  const outFile = path.join(outDir, 'runtime.js')
 
   try {
     await esbuild.build({
@@ -16,7 +16,8 @@ export async function buildRuntime(outDir: string) {
       outfile: outFile,
       platform: 'browser',
       target: 'es2020',
-    });
+      loader: { '.exj': 'ts' },
+    })
 
     await esbuild.build({
       entryPoints: [runtimeSource],
@@ -26,10 +27,11 @@ export async function buildRuntime(outDir: string) {
       outfile: path.join(outDir, 'runtime.dev.js'),
       platform: 'browser',
       target: 'es2020',
-    });
+      loader: { '.exj': 'ts' },
+    })
 
-    success('Runtime built');
+    success('Runtime built')
   } catch (e: any) {
-    error(e.message);
+    error(e.message)
   }
 }

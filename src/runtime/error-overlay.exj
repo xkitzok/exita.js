@@ -1,4 +1,3 @@
-// Error overlay for the browser – shows a nice error panel
 export function injectErrorOverlay() {
   const style = document.createElement('style');
   style.textContent = `
@@ -14,14 +13,12 @@ export function injectErrorOverlay() {
     }
   `;
   document.head.appendChild(style);
-
   window.addEventListener('error', (e) => {
     showOverlay(e.error?.message || e.message);
   });
   window.addEventListener('unhandledrejection', (e) => {
     showOverlay(e.reason?.message || 'Unhandled Promise Rejection');
   });
-
   function showOverlay(message: string) {
     const existing = document.getElementById('exita-error-overlay');
     if (existing) existing.remove();

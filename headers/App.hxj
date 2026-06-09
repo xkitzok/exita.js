@@ -1,7 +1,0 @@
-// App.hxj - AUTO-GENERATED, DO NOT EDIT MANUALLY
-Add.Module [App.exj]
-
-export declare function App(): JSXElement
-
-// Optional: exported signals for external optimization
-export declare const __signals: string[]

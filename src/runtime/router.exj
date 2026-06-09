@@ -1,18 +1,13 @@
-// Simple hash-based router
 type RouteHandler = () => any;
-
 class Router {
   private routes: Map<string, RouteHandler> = new Map();
   private currentHandler: RouteHandler | null = null;
-
   constructor() {
     window.addEventListener('hashchange', () => this.resolve());
   }
-
   add(path: string, handler: RouteHandler) {
     this.routes.set(path, handler);
   }
-
   resolve() {
     const hash = location.hash.slice(1) || '/';
     const handler = this.routes.get(hash);
@@ -25,10 +20,8 @@ class Router {
       }
     }
   }
-
   start() {
     this.resolve();
   }
 }
-
 export const router = new Router();
