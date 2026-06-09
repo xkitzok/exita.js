@@ -1,0 +1,18 @@
+Add.Module [App.hxj]
+
+import { Button } from './Button.exj.js'
+
+function App() {
+  let count = 0
+
+  return (
+    <div>
+      <h1>Coub: {count}</h1>
+      <Button variant="secondary" onClick={() => count++}>
+        Increment
+      </Button>
+    </div>
+  )
+}
+
+export default App

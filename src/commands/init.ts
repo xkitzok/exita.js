@@ -1,0 +1,51 @@
+import * as fs from 'fs';
+import * as path from 'path';
+
+export function initProject() {
+  const cwd = process.cwd();
+  const exitapkgPath = path.join(cwd, 'exitapkg.json');
+  if (fs.existsSync(exitapkgPath)) {
+    console.error('exitapkg.json already exists.');
+    return;
+  }
+
+  const exitapkg = {
+    name: path.basename(cwd),
+    version: '0.1.0',
+    description: '',
+    main: 'src/app.exj',
+    scripts: {
+      build: 'exita build',
+      run: 'exita run',
+    },
+    dependencies: {},
+    devDependencies: {},
+  };
+
+  fs.writeFileSync(exitapkgPath, JSON.stringify(exitapkg, null, 2));
+
+  // Create src/app.exj
+  const srcDir = path.join(cwd, 'src');
+  if (!fs.existsSync(srcDir)) fs.mkdirSync(srcDir);
+  fs.writeFileSync(
+    path.join(srcDir, 'app.exj'),
+    `Add.Module [App.hxj]
+
+function App() {
+  let message = "Hello Exita!"
+  return <h1>{message}</h1>
+}
+
+export default App
+`
+  );
+
+  // Create lock file
+  fs.writeFileSync(
+    path.join(cwd, 'exitapkg.json.lock'),
+    JSON.stringify({ lockfileVersion: 1, packages: {} }, null, 2)
+  );
+
+  console.log('✅ Exita project initialized!');
+  console.log('   Run: exita run');
+}

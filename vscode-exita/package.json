@@ -1,0 +1,21 @@
+{
+  "name": "exita-vscode",
+  "displayName": "Exita",
+  "version": "0.1.0",
+  "engines": { "vscode": "^1.80.0" },
+  "categories": ["Programming Languages"],
+  "contributes": {
+    "languages": [
+      {
+        "id": "exj",
+        "extensions": [".exj"],
+        "aliases": ["Exita Source"]
+      },
+      {
+        "id": "hxj",
+        "extensions": [".hxj"],
+        "aliases": ["Exita Header"]
+      }
+    ]
+  }
+}

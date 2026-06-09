@@ -1,0 +1,120 @@
+// ── Signals ──
+let currentEffect: (() => void) | null = null;
+
+export function signal<T>(initialValue: T) {
+  let value = initialValue;
+  const subscribers = new Set<() => void>();
+  return new Proxy({} as { value: T }, {
+    get(_, prop) {
+      if (prop === 'value') {
+        if (currentEffect) subscribers.add(currentEffect);
+        return value;
+      }
+    },
+    set(_, prop, newVal) {
+      if (prop === 'value') {
+        if (value !== newVal) {
+          value = newVal;
+          subscribers.forEach(fn => fn());
+        }
+        return true;
+      }
+      return false;
+    }
+  });
+}
+
+export function effect(fn: () => void) {
+  const run = () => { currentEffect = run; fn(); currentEffect = null; };
+  run();
+}
+
+export function computed<T>(fn: () => T) {
+  const s = signal<T>(undefined as any);
+  effect(() => { (s as any).value = fn(); });
+  return s;
+}
+
+// ── Async component support ──
+type VNode = any; // simplified
+const pending = new WeakSet<Promise<any>>();
+
+export function createElement(
+  type: string | Function,
+  props: Record<string, any> | null,
+  ...children: any[]
+): any {
+  if (typeof type === 'function') {
+    const result = type({ ...props, children });
+    // If the component returns a Promise (async), handle it
+    if (result instanceof Promise) {
+      return handleAsyncComponent(result, type.name || 'Anonymous');
+    }
+    return result;
+  }
+
+  const el = document.createElement(type);
+  if (props) {
+    for (const [key, val] of Object.entries(props)) {
+      if (key.startsWith('on')) {
+        const event = key.slice(2).toLowerCase();
+        el.addEventListener(event, val);
+      } else if (key === 'class' || key === 'className') {
+        el.className = val;
+      } else if (key === 'style' && typeof val === 'object') {
+        Object.assign(el.style, val);
+      } else {
+        el.setAttribute(key, String(val));
+      }
+    }
+  }
+
+  children.flat().forEach(child => {
+    if (child == null || child === false) return;
+    if (typeof child === 'string' || typeof child === 'number') {
+      el.appendChild(document.createTextNode(String(child)));
+    } else if (child instanceof Node) {
+      el.appendChild(child);
+    } else if (typeof child === 'function') {
+      const placeholder = document.createTextNode('');
+      el.appendChild(placeholder);
+      effect(() => {
+        const result = child();
+        if (result instanceof Node) placeholder.replaceWith(result);
+        else placeholder.textContent = String(result);
+      });
+    }
+  });
+  return el;
+}
+
+function handleAsyncComponent(promise: Promise<any>, name: string) {
+  // Return a placeholder that resolves later
+  const placeholder = document.createElement('div');
+  placeholder.setAttribute('data-async', name);
+  placeholder.textContent = `Loading ${name}...`;
+  promise.then(resolved => {
+    const parent = placeholder.parentNode;
+    if (parent) {
+      parent.replaceChild(resolved, placeholder);
+    }
+  });
+  return placeholder;
+}
+
+export function Fragment({ children }: { children?: any[] }) {
+  const frag = document.createDocumentFragment();
+  (children || []).flat().forEach(child => {
+    if (child instanceof Node) frag.appendChild(child);
+    else if (typeof child === 'string') frag.appendChild(document.createTextNode(child));
+  });
+  return frag;
+}
+
+export function render(component: () => any, container: HTMLElement) {
+  container.innerHTML = '';
+  const vnode = component();
+  if (vnode instanceof Node) {
+    container.appendChild(vnode);
+  }
+}
