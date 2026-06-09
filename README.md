@@ -1,6 +1,6 @@
 ## Exita
 
-Exita.js is a programming language forked off TypeScript to provide a better developer experience. Exita.js was bulit with AI assistance for coding although i did the architecture. You can contribute.
+Exita.js is a programming language forked off TypeScript to provide a better developer experience. Exita.js was bulit with AI assistance for coding although i did the architecture. You can contribute by doing a pull request.
 
 ## Why Exita
 
