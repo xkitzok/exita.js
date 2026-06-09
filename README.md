@@ -56,3 +56,7 @@ exita run
 | `.exj` | Exita source file (components, logic) |
 | `.hxj` | Exita header file (auto-generated contract) |
 | `.exj.css` | Scoped styles (auto-extracted) |
+
+## NOTICE!
+
+If theres any mistakes or errors in Exita.js, please open an issue.
