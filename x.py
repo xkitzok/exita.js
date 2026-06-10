@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
-"""bootstrapper for exita"""
+"""Exita bootstrapper – compiles the compiler and runs commands."""
 
-import sys, os, subprocess, shutil, pathlib, stat
+import sys
+import os
+import subprocess
+import shutil
+import pathlib
+import stat
 
 ROOT = pathlib.Path(__file__).resolve().parent
 DIST_CLI = ROOT / "dist" / "cli.js"
@@ -55,11 +60,13 @@ def find_node():
     return shutil.which('node') or shutil.which('nodejs')
 
 def ensure_deps():
+    """Install npm dependencies if node_modules is missing."""
     if not (ROOT / 'node_modules').exists():
         print("Installing dependencies...")
         subprocess.run(['npm', 'install'], cwd=ROOT, check=True)
 
 def bootstrap():
+    """Compile all .exj sources if dist/cli.js does not exist."""
     if DIST_CLI.exists():
         return
     print("Bootstrapping Exita compiler...")
@@ -80,38 +87,45 @@ def bootstrap():
 
 def fix_global_exita():
     """Ensure /usr/local/bin/exita is a symlink to dist/cli.js.
-       Removes any broken file first."""
-    # Only on Unix-like systems
+    Requires root privileges. If it fails, print a warning and continue.
+    """
     if os.name != 'posix':
         return
 
-    # Ensure dist/cli.js has the Node shebang
-    with open(DIST_CLI, 'r') as f:
-        first_line = f.readline()
-    if not first_line.startswith('#!/usr/bin/env node'):
-        print("Fixing shebang in dist/cli.js")
+    # Ensure dist/cli.js has a shebang
+    try:
         with open(DIST_CLI, 'r') as f:
-            content = f.read()
-        with open(DIST_CLI, 'w') as f:
-            f.write('#!/usr/bin/env node\n' + content)
-    # Make it executable
-    st = os.stat(DIST_CLI)
-    os.chmod(DIST_CLI, st.st_mode | stat.S_IEXEC)
+            first_line = f.readline()
+        if not first_line.startswith('#!/usr/bin/env node'):
+            print("Fixing shebang in dist/cli.js")
+            with open(DIST_CLI, 'r') as f:
+                content = f.read()
+            with open(DIST_CLI, 'w') as f:
+                f.write('#!/usr/bin/env node\n' + content)
+        # Make executable
+        st = os.stat(DIST_CLI)
+        os.chmod(DIST_CLI, st.st_mode | stat.S_IEXEC)
+    except Exception as e:
+        print(f"Warning: Could not prepare dist/cli.js: {e}")
+        return
 
     target = str(DIST_CLI.resolve())
 
-    # Remove if it's a file (not a symlink) or points to wrong target
-    if os.path.exists(GLOBAL_LINK):
-        if os.path.islink(GLOBAL_LINK):
-            if os.readlink(GLOBAL_LINK) == target:
+    # Check if we can write to the global link location
+    try:
+        if os.path.exists(GLOBAL_LINK):
+            if os.path.islink(GLOBAL_LINK) and os.readlink(GLOBAL_LINK) == target:
                 return  # already correct
-            else:
-                os.unlink(GLOBAL_LINK)
-        else:
             os.remove(GLOBAL_LINK)
-    # Create symlink
-    os.symlink(target, GLOBAL_LINK)
-    print(f"Global exita linked: {GLOBAL_LINK} -> {target}")
+        os.symlink(target, GLOBAL_LINK)
+        print(f"Global exita linked: {GLOBAL_LINK} -> {target}")
+    except PermissionError:
+        print(f"Permission denied: cannot update {GLOBAL_LINK}.")
+        print(f"To enable the global 'exita' command, run:")
+        print(f"  sudo rm -f {GLOBAL_LINK}")
+        print(f"  sudo ln -sf {target} {GLOBAL_LINK}")
+    except Exception as e:
+        print(f"Warning: Could not update global exita link: {e}")
 
 def main():
     bootstrap()
@@ -119,7 +133,7 @@ def main():
     node = find_node()
     if not node:
         sys.exit("Node.js required to run Exita.")
-    # Run the actual exita command
+    # Replace the Python process with the real exita command
     args = [node, str(DIST_CLI)] + sys.argv[1:]
     os.execv(node, args)
 
