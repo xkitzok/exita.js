@@ -1,37 +1,172 @@
 import * as esbuild from 'esbuild'
 import * as path from 'path'
+import * as fs from 'fs'
+import * as os from 'os'
 import { success, error } from '../utils/diagnostics'
 
+const runtimeSource = `
+let currentEffect = null
+
+export function signal(initialValue) {
+  let value = initialValue
+  const subscribers = new Set()
+  return new Proxy({}, {
+    get(_, prop) {
+      if (prop === 'value') {
+        if (currentEffect) subscribers.add(currentEffect)
+        return value
+      }
+    },
+    set(_, prop, newVal) {
+      if (prop === 'value') {
+        if (value !== newVal) {
+          value = newVal
+          subscribers.forEach(fn => fn())
+        }
+        return true
+      }
+      return false
+    }
+  })
+}
+
+export function effect(fn) {
+  const run = () => { currentEffect = run; fn(); currentEffect = null }
+  run()
+}
+
+export function computed(fn) {
+  const s = signal(undefined)
+  effect(() => { s.value = fn() })
+  return s
+}
+
+export function createElement(type, props, ...children) {
+  if (typeof type === 'function') {
+    const result = type({ ...props, children })
+    if (result instanceof Promise) {
+      const placeholder = document.createElement('div')
+      placeholder.textContent = 'Loading...'
+      result.then(res => {
+        const parent = placeholder.parentNode
+        if (parent) parent.replaceChild(res, placeholder)
+      })
+      return placeholder
+    }
+    return result
+  }
+  const el = document.createElement(type)
+  if (props) {
+    for (const [key, val] of Object.entries(props)) {
+      if (key.startsWith('on')) {
+        el.addEventListener(key.slice(2).toLowerCase(), val)
+      } else if (key === 'class' || key === 'className') {
+        el.className = val
+      } else if (key === 'style' && typeof val === 'object') {
+        Object.assign(el.style, val)
+      } else {
+        el.setAttribute(key, String(val))
+      }
+    }
+  }
+  children.flat().forEach(child => {
+    if (child == null || child === false) return
+    if (typeof child === 'string' || typeof child === 'number') {
+      el.appendChild(document.createTextNode(String(child)))
+    } else if (child instanceof Node) {
+      el.appendChild(child)
+    } else if (typeof child === 'function') {
+      const placeholder = document.createTextNode('')
+      el.appendChild(placeholder)
+      effect(() => {
+        const result = child()
+        if (result instanceof Node) placeholder.replaceWith(result)
+        else placeholder.textContent = String(result)
+      })
+    }
+  })
+  return el
+}
+
+export function Fragment({ children }) {
+  const frag = document.createDocumentFragment()
+  (children || []).flat().forEach(child => {
+    if (child instanceof Node) frag.appendChild(child)
+    else frag.appendChild(document.createTextNode(String(child)))
+  })
+  return frag
+}
+
+export function render(component, container) {
+  container.innerHTML = ''
+  container.appendChild(component())
+}
+
+export function injectErrorOverlay() {
+  const style = document.createElement('style')
+  style.textContent = \`
+    #exita-error-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.9); color: #f44; font-family: monospace;
+      display: flex; align-items: center; justify-content: center;
+      z-index: 99999; padding: 2rem; box-sizing: border-box;
+    }
+    #exita-error-overlay pre {
+      background: #111; padding: 1.5rem; border-radius: 8px;
+      max-width: 90%; overflow: auto;
+    }
+  \`
+  document.head.appendChild(style)
+
+  window.addEventListener('error', (e) => {
+    showOverlay(e.error?.message || e.message)
+  })
+  window.addEventListener('unhandledrejection', (e) => {
+    showOverlay(e.reason?.message || 'Unhandled Promise Rejection')
+  })
+
+  function showOverlay(message) {
+    const existing = document.getElementById('exita-error-overlay')
+    if (existing) existing.remove()
+    const div = document.createElement('div')
+    div.id = 'exita-error-overlay'
+    div.innerHTML = \`<pre>\${message.replace(/</g,'&lt;')}</pre>\`
+    document.body.appendChild(div)
+  }
+}
+`
+
 export async function buildRuntime(outDir: string) {
-  const projectRoot = process.cwd()
-  const runtimeSource = path.join(projectRoot, 'src', 'runtime', 'exita-runtime.exj')
-  const outFile = path.join(outDir, 'runtime.js')
+  // Write runtime source to a temporary file
+  const tmpFile = path.join(os.tmpdir(), `exita-runtime-${Date.now()}.js`)
+  fs.writeFileSync(tmpFile, runtimeSource)
 
   try {
     await esbuild.build({
-      entryPoints: [runtimeSource],
+      entryPoints: [tmpFile],
       bundle: true,
       minify: true,
       format: 'esm',
-      outfile: outFile,
+      outfile: path.join(outDir, 'runtime.js'),
       platform: 'browser',
       target: 'es2020',
-      loader: { '.exj': 'ts' },
     })
 
     await esbuild.build({
-      entryPoints: [runtimeSource],
+      entryPoints: [tmpFile],
       bundle: true,
       minify: false,
       format: 'esm',
       outfile: path.join(outDir, 'runtime.dev.js'),
       platform: 'browser',
       target: 'es2020',
-      loader: { '.exj': 'ts' },
     })
 
     success('Runtime built')
   } catch (e: any) {
     error(e.message)
+  } finally {
+    // Clean up temp file
+    fs.unlinkSync(tmpFile)
   }
 }
