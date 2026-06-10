@@ -1,7 +1,7 @@
 {
   "name": "exita-compiler",
   "version": "0.5.0",
-  "description": "compiler",
+  "description": "compiler for exita",
   "main": "dist/index.js",
   "bin": {
     "exita": "./dist/cli.js"
